@@ -1,51 +1,163 @@
 @extends('layouts.app')
 
 @section('content')
-    <h2>Staff List</h2>
+    <div class="staff-container">
 
-    <input type="text" id="staffSearch" class="search-input" placeholder="Search Staff...">
+        <div class="controls">
+            <input type="text" id="staffSearch" class="search-input" placeholder="Search Staff...">
 
-    <select id="statusFilter">
-        <option value="">All Status</option>
-        <option value="Active">Active</option>
-        <option value="Expired">Expired</option>
-        <option value="Time to Renew">Time to Renew</option>
-    </select>
+            <select id="statusFilter" class="filter-select">
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Expired">Expired</option>
+                <option value="Time to Renew">Time to Renew</option>
+            </select>
+        </div>
 
-    <!-- Loader -->
-    <div id="loader" style="display:none; text-align:center; margin:10px;">
-        <div class="spinner"></div>
+        <!-- Loader -->
+        <div id="loader" style="display:none; text-align:center; margin:10px;">
+            <div class="spinner"></div>
+            <p class="loading-text">Loading...</p>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="staffTable" class="styled-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>ID No.</th>
+                        <th>Work Order No</th>
+                        <th>Client</th>
+                        <th>Expiry Date</th>
+                        <th>Lead Time</th>
+                        <th>Days Left</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="staffRows">
+                    @include('partials.staff-rows', ['staff' => $staff])
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <table id="staffTable">
-        <tr>
-            <th></th>
-            <th>#</th>
-            <th>Name</th>
-            <th>ID No.</th>
-            <th>Work Order No</th>
-            <th>Client</th>
-            <th>Expiry Date</th>
-            <th>Lead Time</th>
-            <th>Days Left</th>
-            <th>Status</th>
-        </tr>
-
-        <tbody id="staffRows">
-            @include('partials.staff-rows', ['staff' => $staff])
-        </tbody>
-    </table>
-
-    <!-- Spinner CSS -->
+    <!-- Styling -->
     <style>
+        .staff-container {
+            margin: 20px auto;
+            padding: 15px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: start;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-input,
+        .filter-select {
+            height: 48px;
+            /* Same fixed height */
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        /* Specific tweaks */
+        .search-input {
+            padding: 0 50px;
+            /* Just horizontal padding */
+        }
+
+        .filter-select {
+            padding: 0 40px 0 16px;
+            /* Left padding for text, right padding for arrow */
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='%233498db' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            cursor: pointer;
+        }
+
+        /* For better look on focus */
+        .filter-select:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.4);
+        }
+
+
+        .search-input:focus,
+        .filter-select:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.4);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .styled-table thead {
+            background: #3498db;
+            color: #000000;
+        }
+
+        .styled-table th,
+        .styled-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            position: relative;
+        }
+
+        .styled-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .styled-table tr:hover {
+            background: #eef6ff;
+        }
+
+        .selected-row {
+            background-color: #d1e7fd !important;
+        }
+
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
             border-radius: 50%;
             width: 35px;
             height: 35px;
-            animation: spin 1s linear infinite;
+            animation: spin 1s linear in finite;
             margin: auto;
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: #555;
+            margin-top: 6px;
         }
 
         @keyframes spin {
@@ -58,10 +170,6 @@
             }
         }
 
-        .selected-row {
-            background-color: #d1e7fd;
-        }
-
         .th-resizer {
             width: 5px;
             cursor: col-resize;
@@ -72,158 +180,22 @@
             user-select: none;
         }
     </style>
-
     <script>
-        const updateUrl = '/staff/inline-update';
+
         let selectedRows = new Set();
         let isSelecting = false;
 
         // ====== Main Initialization ======
         function initStaffTable() {
-            enableInlineAndDatePicker('staffTable');
-            attachRowSelection();
             applyFilters();
             makeColumnsResizable('staffTable');
             autoRefreshTable('staffTable');
         }
         initStaffTable();
 
-        // ====== Inline Editing + Date Picker ======
-        function enableInlineAndDatePicker(tableId) {
-            const table = document.getElementById(tableId);
-            const loader = document.getElementById('loader');
 
-            // ===== Text Editable Cells =====
-            table.querySelectorAll('td.editable').forEach(cell => {
-                if (cell.dataset.attached) return;
-                cell.dataset.attached = true;
 
-                // Arrow Key Navigation
-                cell.addEventListener('keydown', function (e) {
-                    const td = this;
-                    const tr = td.parentElement;
-                    let nextCell;
-                    if (e.key === 'ArrowRight') nextCell = td.nextElementSibling;
-                    else if (e.key === 'ArrowLeft') nextCell = td.previousElementSibling;
-                    else if (e.key === 'ArrowDown') nextCell = tr.nextElementSibling?.children[td.cellIndex];
-                    else if (e.key === 'ArrowUp') nextCell = tr.previousElementSibling?.children[td.cellIndex];
-                    else if (e.key === 'Enter') {
-                        e.preventDefault();
-                        nextCell = tr.nextElementSibling?.children[td.cellIndex];
-                    }
-                    if (nextCell) nextCell.focus();
-                });
 
-                // Blur event to save changes
-                cell.addEventListener('blur', function () {
-                    const rowId = this.parentElement.dataset.row; // row number
-                    const col = this.dataset.col;                // column letter
-                    const value = this.innerText.trim();
-                    if (!rowId || !col) return;
-
-                    loader.style.display = 'block'; // show loader
-
-                    fetch(`${updateUrl}/${rowId}`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Content-Type': 'application/json'
-                        }
-                            body: JSON.stringify({ col, value })
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            loader.style.display = 'none'; // hide loader
-                            if (!data.success) console.error('Failed to save');
-                        })
-                        .catch(err => {
-                            loader.style.display = 'none';
-                            console.error(err);
-                            alert('Error saving cell');
-                        });
-                });
-            });
-
-            // ===== Expiry / Date Cells =====
-            table.querySelectorAll('td.expiry-cell').forEach(cell => {
-                if (cell.dataset.attached) return;
-                cell.dataset.attached = true;
-
-                cell.addEventListener('click', function () {
-                    if (cell.querySelector('input')) return; // already open
-                    const currentValue = cell.dataset.value || cell.innerText;
-                    const input = document.createElement('input');
-                    input.type = 'date';
-                    input.value = currentValue;
-                    input.style.width = '100%';
-                    cell.innerHTML = '';
-                    cell.appendChild(input);
-                    input.focus();
-
-                    input.addEventListener('blur', () => {
-                        const rowId = cell.parentElement.dataset.row;
-                        const col = cell.dataset.col;
-                        if (!rowId || !col) return;
-
-                        loader.style.display = 'block'; // show loader
-
-                        fetch(`${updateUrl}/${rowId}`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ col, value: input.value })
-                        })
-                            .then(res => res.json())
-                            .then(data => {
-                                loader.style.display = 'none'; // hide loader
-                                if (data.success) {
-                                    cell.innerText = input.value;
-                                    cell.dataset.value = input.value;
-                                } else {
-                                    cell.innerText = cell.dataset.value;
-                                    alert('Failed to save date');
-                                }
-                            })
-                            .catch(err => {
-                                loader.style.display = 'none';
-                                console.error(err);
-                                cell.innerText = cell.dataset.value;
-                                alert('Error saving date');
-                            });
-                    });
-
-                    input.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-                    });
-                });
-            });
-        }
-
-        function saveDate(cell, newValue) {
-            const rowId = cell.parentElement.dataset.row;
-            const col = cell.dataset.col;
-
-            fetch(`${updateUrl}/${rowId}`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ col, value: newValue })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        cell.innerText = newValue;
-                        cell.dataset.value = newValue;
-                    } else {
-                        cell.innerText = cell.dataset.value;
-                        alert('Failed to save date');
-                    }
-                });
-        }
 
         // ====== Auto-Refresh ======
         function autoRefreshTable(tableId) {
@@ -273,88 +245,6 @@
                 applyFilters();
             }, 1000);
         }
-
-        // ====== Row Selection & Deletion ======
-        function attachRowSelection() {
-            const table = document.getElementById('staffTable');
-            const rows = Array.from(table.querySelectorAll('tr[data-row]'));
-
-            rows.forEach(tr => {
-                const selectorCell = tr.querySelector('.select-cell');
-                if (!selectorCell || selectorCell.dataset.attached) return;
-                selectorCell.dataset.attached = true;
-
-                // Single click: select row
-                selectorCell.addEventListener('click', () => {
-                    selectedRows.forEach(rowId => {
-                        const oldTr = table.querySelector(`tr[data-row="${rowId}"]`);
-                        if (oldTr) oldTr.classList.remove('selected-row');
-                    });
-                    selectedRows.clear();
-                    selectedRows.add(tr.dataset.row);
-                    tr.classList.add('selected-row');
-                });
-
-                // Drag selection
-                selectorCell.addEventListener('pointerdown', e => {
-                    isSelecting = true;
-                    selectedRows.clear();
-                    selectRow(tr);
-                    e.preventDefault();
-                });
-
-                selectorCell.addEventListener('pointerenter', e => {
-                    if (isSelecting) selectRow(tr);
-                });
-            });
-
-            document.addEventListener('pointerup', () => { isSelecting = false; });
-        }
-
-        function selectRow(tr) {
-            const rowId = tr.dataset.row;
-            if (!selectedRows.has(rowId)) {
-                selectedRows.add(rowId);
-                tr.classList.add('selected-row');
-            }
-        }
-
-        // Delete with Delete key
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Delete' && selectedRows.size > 0) {
-                e.preventDefault();
-                if (!confirm('Delete selected rows?')) return;
-                const table = document.getElementById('staffTable');
-                selectedRows.forEach(rowId => {
-                    fetch(`/staff/delete/${rowId}`, {
-                        method: 'DELETE',
-                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                const tr = table.querySelector(`tr[data-row="${rowId}"]`);
-                                if (tr) tr.remove();
-                                selectedRows.delete(rowId);
-                                document.getElementById('totalStaffCount').innerText = table.querySelectorAll('tr[data-row]').length;
-                            }
-                        });
-                });
-            }
-        });
-
-        // Deselect rows when clicking outside table
-        document.addEventListener('click', function (e) {
-            const table = document.getElementById('staffTable');
-            if (!table.contains(e.target)) {
-                selectedRows.forEach(rowId => {
-                    const tr = table.querySelector(`tr[data-row="${rowId}"]`);
-                    if (tr) tr.classList.remove('selected-row');
-                });
-                selectedRows.clear();
-            }
-        });
-
         // ====== Live Search + Status Filter with Loader ======
         function applyFilters() {
             const loader = document.getElementById('loader');
